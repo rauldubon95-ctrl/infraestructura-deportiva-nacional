@@ -3,6 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { useEffect } from 'react';
 
 export interface Academia {
   id: number;
@@ -12,9 +13,10 @@ export interface Academia {
   usuarios: number;
   lat: number;
   lng: number;
+  municipio?: string;
+  departamento?: string;
 }
 
-// Iconos Visuales (Emojis Deportivos)
 const createSportIcon = (deporte: string) => {
   let emoji = '🏅';
   let color = '#334155';
@@ -53,15 +55,26 @@ const createSportIcon = (deporte: string) => {
   });
 };
 
+// --- DETECTOR DE CLICS MEJORADO ---
 const ClickDetector = ({ onMapClick, isAddingMode }: { onMapClick: (lat: number, lng: number) => void, isAddingMode: boolean }) => {
-  useMapEvents({
+  const map = useMapEvents({
     click(e) {
       if (isAddingMode) {
         onMapClick(e.latlng.lat, e.latlng.lng);
       }
     },
   });
-  return isAddingMode ? <style>{`.leaflet-container { cursor: crosshair !important; }`}</style> : null;
+
+  // Efecto para cambiar el cursor visualmente
+  useEffect(() => {
+    if (isAddingMode) {
+      map.getContainer().style.cursor = 'crosshair';
+    } else {
+      map.getContainer().style.cursor = 'grab';
+    }
+  }, [isAddingMode, map]);
+
+  return null;
 };
 
 const center: [number, number] = [13.794185, -88.89653];
@@ -69,18 +82,17 @@ const center: [number, number] = [13.794185, -88.89653];
 const Map = ({ data, isAddingMode, onMapClick }: { data: Academia[], isAddingMode?: boolean, onMapClick?: (lat: number, lng: number) => void }) => {
   return (
     <MapContainer center={center} zoom={9} scrollWheelZoom={true} className="h-full w-full bg-[#0f172a]">
-      {/* Capa Satelital ESRI */}
       <TileLayer
         attribution='Tiles &copy; Esri'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
-      {/* Capa de Etiquetas (Calles/Nombres) para ubicarse mejor */}
       <TileLayer
         url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
       />
 
-      {onMapClick && isAddingMode !== undefined && (
-        <ClickDetector onMapClick={onMapClick} isAddingMode={isAddingMode} />
+      {/* Componente que escucha los clics */}
+      {onMapClick && (
+        <ClickDetector onMapClick={onMapClick} isAddingMode={!!isAddingMode} />
       )}
 
       {data.map((item) => (
@@ -95,6 +107,7 @@ const Map = ({ data, isAddingMode, onMapClick }: { data: Academia[], isAddingMod
                  </div>
               </div>
               <div className="space-y-1 text-xs text-slate-700">
+                 <p><strong>Ubicación:</strong> {item.municipio || 'Nacional'}</p>
                  <p><strong>Infraestructura:</strong> {item.infraestructura}</p>
                  <p><strong>Aforo:</strong> {item.usuarios} atletas</p>
               </div>
