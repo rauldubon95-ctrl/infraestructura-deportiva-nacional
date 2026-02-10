@@ -7,13 +7,12 @@ import { supabase } from '../lib/supabase';
 import { CENSOS_2024 } from '../lib/censos'; 
 import { 
   Database, Plus, Map as MapIcon, Activity, Trophy, Filter, LogOut, CheckCircle, 
-  Users, Building, Loader2, BarChart3, Home as HomeIcon, 
-  UserCheck, LayoutDashboard, Settings, Globe, PieChart
+  Users, Building, BarChart3, Globe, PieChart, UserCheck, LayoutDashboard
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
-// --- INTERFAZ ACTUALIZADA (Con desglose por edad) ---
+// --- INTERFAZ ---
 export interface Academia {
   id: number;
   nombre: string;
@@ -28,7 +27,7 @@ export interface Academia {
   mujeres: number;
   usuarios: number;
 
-  // Desglose Demográfico Nuevo
+  // Desglose Demográfico
   hombres_0_12: number;
   mujeres_0_12: number;
   hombres_13_29: number;
@@ -48,78 +47,6 @@ const MapWithNoSSR = dynamic(() => import('../components/Map'), {
   loading: () => <div className="h-full w-full flex items-center justify-center bg-slate-900 text-slate-500 font-mono text-xs">Cargando Sistema de Información Geográfica...</div>
 });
 
-// --- CONSTANTES ---
-const DEPORTES = ['Fútbol', 'Baloncesto', 'Natación', 'Artes Marciales', 'Voleibol', 'Atletismo', 'Patinaje', 'Béisbol', 'Softbol', 'Otros'];
-const INFRA = ['Estadio', 'Cancha Sintética', 'Cancha Natural', 'Gimnasio Techado', 'Complejo Deportivo', 'Espacio Público', 'Pista', 'Piscinas', 'Cancha de Baloncesto'];
-const USOS = ['Recreativo', 'Entrenamiento', 'Alto Rendimiento', 'Competencia Local', 'Escolar', 'Comunitario', 'Privado'];
-
-// --- SIMULACIÓN AVANZADA ---
-const generarDatosSimulados = async () => {
-  const confirmacion = confirm("⚠️ ESTO GENERARÁ NUEVOS DATOS.\n\nSe insertarán 20 registros con desglose por EDAD y GÉNERO.\n¿Deseas continuar?");
-  if (!confirmacion) return;
-
-  const deptosKeys = Object.keys(CENSOS_2024);
-  const payloads = [];
-
-  for (let i = 0; i < 20; i++) {
-    const randomDept = deptosKeys[Math.floor(Math.random() * deptosKeys.length)];
-    const munisKeys = Object.keys(CENSOS_2024[randomDept].municipios);
-    const randomMuni = munisKeys[Math.floor(Math.random() * munisKeys.length)];
-    const distritosList = CENSOS_2024[randomDept].municipios[randomMuni].distritos;
-    const randomDist = distritosList[Math.floor(Math.random() * distritosList.length)];
-    
-    // Coordenadas
-    const latBase = 13.7 + (Math.random() * 0.3 - 0.15);
-    const lngBase = -89.2 + (Math.random() * 1.5 - 0.75);
-
-    // Generación demográfica detallada
-    const h_0_12 = Math.floor(Math.random() * 150);
-    const m_0_12 = Math.floor(Math.random() * 150);
-    const h_13_29 = Math.floor(Math.random() * 200);
-    const m_13_29 = Math.floor(Math.random() * 200);
-    const h_30_mas = Math.floor(Math.random() * 100);
-    const m_30_mas = Math.floor(Math.random() * 100);
-
-    // Cálculos automáticos de totales
-    const totalHombres = h_0_12 + h_13_29 + h_30_mas;
-    const totalMujeres = m_0_12 + m_13_29 + m_30_mas;
-
-    payloads.push({
-      nombre: `Instalación Deportiva ${randomDist} #${i+1}`,
-      lat: latBase,
-      lng: lngBase,
-      deporte: DEPORTES[Math.floor(Math.random() * DEPORTES.length)],
-      infraestructura: INFRA[Math.floor(Math.random() * INFRA.length)],
-      usos: USOS[Math.floor(Math.random() * USOS.length)],
-      
-      // Datos Demográficos Nuevos
-      hombres_0_12: h_0_12,
-      mujeres_0_12: m_0_12,
-      hombres_13_29: h_13_29,
-      mujeres_13_29: m_13_29,
-      hombres_30_mas: h_30_mas,
-      mujeres_30_mas: m_30_mas,
-
-      hombres: totalHombres,
-      mujeres: totalMujeres,
-      usuarios: totalHombres + totalMujeres,
-      
-      departamento: randomDept,
-      municipio: randomMuni,
-      distrito: randomDist,
-      responsable: "Simulación Cooperación",
-      objetivos: "Registro con desglose etario generado automáticamente."
-    });
-  }
-
-  const { error } = await supabase.from('academias').insert(payloads);
-  if (error) alert("Error al simular: " + error.message);
-  else {
-    alert("✅ Datos demográficos generados. Recargando...");
-    window.location.reload();
-  }
-};
-
 // --- COMPONENTES VISUALES ---
 const StatBar = ({ label, value, total, color = "bg-blue-600" }: { label: string, value: number, total: number, color?: string }) => {
   const percent = total > 0 ? (value / total) * 100 : 0;
@@ -136,9 +63,8 @@ const StatBar = ({ label, value, total, color = "bg-blue-600" }: { label: string
   );
 };
 
-// --- NUEVO COMPONENTE: PIRÁMIDE POBLACIONAL ---
+// --- PIRÁMIDE POBLACIONAL ---
 const AgePyramid = ({ data }: { data: Academia[] }) => {
-  // Sumarizar datos
   const stats = data.reduce((acc, curr) => ({
     h_0_12: acc.h_0_12 + (curr.hombres_0_12 || 0),
     m_0_12: acc.m_0_12 + (curr.mujeres_0_12 || 0),
@@ -309,7 +235,7 @@ const DashboardView = ({ data }: { data: Academia[] }) => {
                 </div>
             </div>
 
-            {/* --- NUEVA SECCIÓN: PIRÁMIDE POBLACIONAL --- */}
+            {/* PIRÁMIDE POBLACIONAL */}
             <AgePyramid data={filteredData} />
 
             {/* TABLAS */}
@@ -378,7 +304,6 @@ export default function Home() {
               infraestructura: d.infraestructura,
               usos: d.usos || 'No definido',
               
-              // Mapeo seguro de los nuevos datos
               hombres: d.hombres || 0,
               mujeres: d.mujeres || 0,
               usuarios: d.usuarios || 0,
@@ -452,10 +377,6 @@ export default function Home() {
               
               <button onClick={() => router.push('/registro')} className="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20 transition-all border border-blue-500/50 text-sm">
                 <Plus size={16}/> REGISTRAR INFRAESTRUCTURA
-              </button>
-
-              <button onClick={generarDatosSimulados} className="w-full bg-slate-800 hover:bg-slate-700 p-2 rounded-lg text-xs text-slate-400 flex justify-center items-center gap-2 border border-slate-700 border-dashed">
-                <Settings size={12}/> Generar Datos de Prueba
               </button>
             </div>
           )}

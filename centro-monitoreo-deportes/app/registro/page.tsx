@@ -1,10 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { CENSOS_2024 } from '../../lib/censos'; 
-import { Save, ArrowLeft, MapPin, CheckCircle, AlertTriangle, Calculator, User } from 'lucide-react';
+import { Save, ArrowLeft, MapPin, CheckCircle, AlertTriangle, Calculator, User, Loader2 } from 'lucide-react';
+
+// Importamos el Mapa dinámicamente
+const MapWithNoSSR = dynamic(() => import('../../components/Map'), { 
+  ssr: false,
+  loading: () => <div className="h-64 w-full flex items-center justify-center bg-slate-900 text-slate-500 font-mono text-xs">Cargando Mapa...</div>
+});
 
 const DEPORTES = ['Fútbol', 'Baloncesto', 'Natación', 'Artes Marciales', 'Voleibol', 'Atletismo', 'Patinaje', 'Béisbol', 'Softbol', 'Otros'];
 const INFRA = ['Estadio', 'Cancha Sintética', 'Cancha Natural', 'Gimnasio Techado', 'Complejo Deportivo', 'Espacio Público', 'Pista', 'Piscinas', 'Cancha de Baloncesto'];
@@ -13,12 +20,13 @@ const USOS = ['Recreativo', 'Entrenamiento', 'Alto Rendimiento', 'Competencia Lo
 export default function RegistroPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
   
   // Estado del formulario
   const [form, setForm] = useState({
     nombre: '',
-    lat: 0,
-    lng: 0,
+    lat: 13.6929, 
+    lng: -89.2182,
     deporte: DEPORTES[0],
     infraestructura: INFRA[0],
     usos: USOS[0],
@@ -37,8 +45,12 @@ export default function RegistroPage() {
     mujeres_30_mas: 0,
   });
 
-  // Totales Calculados (Solo lectura)
   const [totales, setTotales] = useState({ hombres: 0, mujeres: 0, total: 0 });
+
+  // 1. AUTO-DETECTAR UBICACIÓN AL CARGAR LA PÁGINA
+  useEffect(() => {
+    obtenerUbicacion(true); 
+  }, []);
 
   // Efecto para calcular totales automáticamente
   useEffect(() => {
@@ -51,12 +63,40 @@ export default function RegistroPage() {
     });
   }, [form.hombres_0_12, form.mujeres_0_12, form.hombres_13_29, form.mujeres_13_29, form.hombres_30_mas, form.mujeres_30_mas]);
 
-  const obtenerUbicacion = () => {
-    if (!navigator.geolocation) return alert("Tu navegador no soporta geolocalización.");
+  // FUNCIÓN PARA OBTENER GPS
+  const obtenerUbicacion = (silencioso = false) => {
+    if (!navigator.geolocation) {
+        if (!silencioso) alert("Tu navegador no soporta geolocalización.");
+        return;
+    }
+
+    setGpsLoading(true);
+
     navigator.geolocation.getCurrentPosition(
-        (pos) => setForm({ ...form, lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => alert("Error obteniendo ubicación: " + err.message)
+        (pos) => {
+            setForm(prev => ({ 
+                ...prev, 
+                lat: pos.coords.latitude, 
+                lng: pos.coords.longitude 
+            }));
+            setGpsLoading(false);
+            if (!silencioso) alert("📍 Ubicación satelital detectada con éxito.");
+        },
+        (err) => {
+            console.error(err);
+            setGpsLoading(false);
+            if (!silencioso) alert("No se pudo obtener la ubicación exacta. Asegúrate de tener el GPS activo.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
     );
+  };
+
+  const handleMapClick = (e: any) => {
+     if (e && e.latlng) {
+         setForm({ ...form, lat: e.latlng.lat, lng: e.latlng.lng });
+     } else if (e && e.lat && e.lng) {
+         setForm({ ...form, lat: e.lat, lng: e.lng });
+     }
   };
 
   const guardar = async () => {
@@ -82,6 +122,32 @@ export default function RegistroPage() {
     }
   };
 
+  // --- CORRECCIÓN AQUÍ ---
+  // Llenamos los campos faltantes con 0 o vacíos para evitar el error de TypeScript
+  const mapData = [{
+      id: 9999, 
+      nombre: "Ubicación Actual",
+      lat: form.lat,
+      lng: form.lng,
+      deporte: form.deporte,
+      infraestructura: form.infraestructura,
+      usos: form.usos,
+      
+      // Datos 'dummy' para satisfacer la interfaz Academia
+      hombres: 0,
+      mujeres: 0,
+      usuarios: 0,
+      departamento: '',
+      municipio: '',
+      distrito: '',
+      hombres_0_12: 0,
+      mujeres_0_12: 0,
+      hombres_13_29: 0,
+      mujeres_13_29: 0,
+      hombres_30_mas: 0,
+      mujeres_30_mas: 0
+  }];
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 flex justify-center">
         <div className="w-full max-w-4xl space-y-6">
@@ -95,9 +161,10 @@ export default function RegistroPage() {
                 </div>
             </div>
 
-            {/* Fila 1: Datos Generales */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-900 p-5 rounded-lg border border-slate-800 space-y-4">
+                
+                {/* COLUMNA IZQUIERDA: DATOS */}
+                <div className="bg-slate-900 p-5 rounded-lg border border-slate-800 space-y-4 h-fit">
                     <h3 className="font-bold text-blue-400 uppercase text-xs tracking-wider mb-2">1. Información Básica</h3>
                     
                     <div>
@@ -130,28 +197,79 @@ export default function RegistroPage() {
                             {USOS.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
                     </div>
+
+                    <div className="pt-4 border-t border-slate-800 mt-4">
+                        <h3 className="font-bold text-purple-400 uppercase text-xs tracking-wider mb-3">3. Beneficiarios (Desglose)</h3>
+                        <div className="bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono text-center text-slate-400 mb-3">
+                            Total Calculado: <span className="text-white font-bold">{totales.total}</span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Niñez (0-12)</span>
+                                <input placeholder="Niños" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.hombres_0_12} onChange={e => setForm({...form, hombres_0_12: parseInt(e.target.value) || 0})} />
+                                <input placeholder="Niñas" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.mujeres_0_12} onChange={e => setForm({...form, mujeres_0_12: parseInt(e.target.value) || 0})} />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Juv. (13-29)</span>
+                                <input placeholder="Hombres" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.hombres_13_29} onChange={e => setForm({...form, hombres_13_29: parseInt(e.target.value) || 0})} />
+                                <input placeholder="Mujeres" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.mujeres_13_29} onChange={e => setForm({...form, mujeres_13_29: parseInt(e.target.value) || 0})} />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Adultos (30+)</span>
+                                <input placeholder="Hombres" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.hombres_30_mas} onChange={e => setForm({...form, hombres_30_mas: parseInt(e.target.value) || 0})} />
+                                <input placeholder="Mujeres" type="number" min="0" className="bg-slate-950 border border-slate-700 rounded p-1 text-xs text-center"
+                                    value={form.mujeres_30_mas} onChange={e => setForm({...form, mujeres_30_mas: parseInt(e.target.value) || 0})} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+                {/* COLUMNA DERECHA: UBICACIÓN GEOGRÁFICA CON MAPA */}
                 <div className="bg-slate-900 p-5 rounded-lg border border-slate-800 space-y-4">
                     <h3 className="font-bold text-green-400 uppercase text-xs tracking-wider mb-2">2. Ubicación Geográfica</h3>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                             <label className="block text-xs mb-1">Latitud</label>
-                             <input type="number" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm" 
-                                value={form.lat} onChange={e => setForm({...form, lat: parseFloat(e.target.value)})} />
-                        </div>
-                        <div>
-                             <label className="block text-xs mb-1">Longitud</label>
-                             <input type="number" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm" 
-                                value={form.lng} onChange={e => setForm({...form, lng: parseFloat(e.target.value)})} />
+                    {/* MAPA INTERACTIVO */}
+                    <div className="h-72 w-full rounded-lg overflow-hidden border border-slate-700 relative z-0">
+                        <MapWithNoSSR 
+                            key={`${form.lat}-${form.lng}`} 
+                            data={mapData} 
+                            isAddingMode={true} 
+                            onMapClick={handleMapClick} 
+                        />
+                        <div className="absolute bottom-2 right-2 bg-slate-900/80 p-1 px-2 rounded text-[9px] text-white pointer-events-none z-[1000] border border-slate-700">
+                            Clic en el mapa para ajustar ubicación
                         </div>
                     </div>
-                    <button onClick={obtenerUbicacion} className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded flex items-center justify-center gap-2 border border-slate-700 transition">
-                        <MapPin size={14}/> Usar mi Ubicación GPS Actual
+
+                    <button 
+                        onClick={() => obtenerUbicacion(false)} 
+                        disabled={gpsLoading}
+                        className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded flex items-center justify-center gap-2 border border-slate-700 transition"
+                    >
+                        {gpsLoading ? <Loader2 className="animate-spin" size={14}/> : <MapPin size={14}/>}
+                        {gpsLoading ? "Buscando satélites..." : "Usar mi Ubicación GPS Actual"}
                     </button>
 
-                    <div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                             <label className="block text-xs mb-1 text-slate-500">Latitud</label>
+                             <input type="number" className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-slate-300" 
+                                value={form.lat} readOnly />
+                        </div>
+                        <div>
+                             <label className="block text-xs mb-1 text-slate-500">Longitud</label>
+                             <input type="number" className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-slate-300" 
+                                value={form.lng} readOnly />
+                        </div>
+                    </div>
+
+                    <div className="border-t border-slate-800 pt-4 mt-2">
                         <label className="block text-xs mb-1">Departamento *</label>
                         <select className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm"
                              value={form.departamento} onChange={e => setForm({...form, departamento: e.target.value, municipio: '', distrito: ''})}>
@@ -179,63 +297,6 @@ export default function RegistroPage() {
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
-
-            {/* Fila 2: Matriz Demográfica */}
-            <div className="bg-slate-900 p-6 rounded-lg border border-slate-800">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-purple-400 uppercase text-xs tracking-wider">3. Beneficiarios (Desglose Demográfico)</h3>
-                    <div className="bg-slate-950 px-3 py-1 rounded border border-slate-800 text-xs font-mono text-slate-400">
-                        Total Calculado: <span className="text-white font-bold">{totales.total}</span> personas
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-6">
-                    {/* Niñez */}
-                    <div className="space-y-3">
-                        <p className="text-center text-xs font-bold text-slate-500 border-b border-slate-800 pb-1">NIÑEZ (0-12 Años)</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-blue-400 font-bold">NIÑOS</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-blue-500 outline-none"
-                                value={form.hombres_0_12} onChange={e => setForm({...form, hombres_0_12: parseInt(e.target.value) || 0})} />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-pink-400 font-bold">NIÑAS</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-pink-500 outline-none"
-                                value={form.mujeres_0_12} onChange={e => setForm({...form, mujeres_0_12: parseInt(e.target.value) || 0})} />
-                        </div>
-                    </div>
-
-                    {/* Juventud */}
-                    <div className="space-y-3">
-                        <p className="text-center text-xs font-bold text-slate-500 border-b border-slate-800 pb-1">JUVENTUD (13-29 Años)</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-blue-400 font-bold">HOMBRES</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-blue-500 outline-none"
-                                value={form.hombres_13_29} onChange={e => setForm({...form, hombres_13_29: parseInt(e.target.value) || 0})} />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-pink-400 font-bold">MUJERES</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-pink-500 outline-none"
-                                value={form.mujeres_13_29} onChange={e => setForm({...form, mujeres_13_29: parseInt(e.target.value) || 0})} />
-                        </div>
-                    </div>
-
-                    {/* Adultos */}
-                    <div className="space-y-3">
-                        <p className="text-center text-xs font-bold text-slate-500 border-b border-slate-800 pb-1">ADULTOS (30+ Años)</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-blue-400 font-bold">HOMBRES</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-blue-500 outline-none"
-                                value={form.hombres_30_mas} onChange={e => setForm({...form, hombres_30_mas: parseInt(e.target.value) || 0})} />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-12 text-pink-400 font-bold">MUJERES</span>
-                            <input type="number" min="0" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm font-mono text-center focus:border-pink-500 outline-none"
-                                value={form.mujeres_30_mas} onChange={e => setForm({...form, mujeres_30_mas: parseInt(e.target.value) || 0})} />
-                        </div>
-                    </div>
                 </div>
             </div>
 
