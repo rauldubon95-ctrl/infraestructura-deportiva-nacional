@@ -378,7 +378,9 @@ export default function Home() {
 
   return (
     <main className="flex h-screen bg-slate-950 text-white overflow-hidden font-sans">
-      <aside className="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col z-50 shadow-2xl">
+      
+      {/* SIDEBAR (Ahora oculto en móvil con hidden md:flex) */}
+      <aside className="hidden md:flex w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex-col z-50 shadow-2xl">
         <div className="p-6 border-b border-slate-800 font-bold text-lg flex gap-3 items-center text-slate-100">
             <div className="w-8 h-8 bg-blue-700 rounded flex items-center justify-center shadow-lg shadow-blue-600/20">
                 <Database size={16} className="text-white"/> 
@@ -432,9 +434,39 @@ export default function Home() {
         </div>
       </aside>
 
-      <div className="flex-1 relative bg-slate-950">
-        {view === 'MAP' ? <MapWithNoSSR data={mapData} isAddingMode={false} onMapClick={() => {}} /> : <DashboardView data={academias} />}
+      <div className="flex-1 relative bg-slate-950 flex flex-col h-full">
+         {/* Área Principal de Contenido */}
+         <div className="flex-1 relative overflow-hidden">
+             {view === 'MAP' ? <MapWithNoSSR data={mapData} isAddingMode={false} onMapClick={() => {}} /> : <DashboardView data={academias} />}
+         </div>
+         {/* Espaciador inferior para que la barra móvil no tape contenido */}
+         <div className="h-16 md:hidden"></div>
       </div>
+
+      {/* NUEVA: BARRA INFERIOR MÓVIL (Solo visible en celular) */}
+      <div className="md:hidden fixed bottom-0 w-full bg-slate-900 border-t border-slate-800 flex justify-around items-center p-3 z-50 pb-safe shadow-2xl">
+          <button onClick={() => setView('MAP')} className={`flex flex-col items-center gap-1 ${view === 'MAP' ? 'text-blue-500' : 'text-slate-500'}`}>
+              <MapIcon size={24} />
+              <span className="text-[10px] font-bold">Mapa</span>
+          </button>
+          
+          {/* Botón Central de Acción Flotante */}
+          {session && isAuthorized ? (
+             <button onClick={() => router.push('/registro')} className="bg-blue-600 p-3 rounded-full -mt-8 shadow-lg shadow-blue-900/50 border-4 border-slate-950 text-white">
+                 <Plus size={28} />
+             </button>
+          ) : (
+             <button onClick={session ? handleLogout : handleLogin} className="bg-slate-800 p-3 rounded-full -mt-8 shadow-lg border-4 border-slate-950 text-slate-400">
+                 {session ? <LogOut size={24}/> : <UserCheck size={24}/>}
+             </button>
+          )}
+
+          <button onClick={() => setView('STATS')} className={`flex flex-col items-center gap-1 ${view === 'STATS' ? 'text-blue-500' : 'text-slate-500'}`}>
+              <LayoutDashboard size={24} />
+              <span className="text-[10px] font-bold">Datos</span>
+          </button>
+      </div>
+
     </main>
   );
 }
