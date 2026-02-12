@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { CENSOS_2024 } from '../lib/censos'; 
 import { 
   Database, Plus, Map as MapIcon, Activity, Trophy, Filter, LogOut, CheckCircle, 
-  Users, Building, BarChart3, Globe, PieChart, UserCheck, LayoutDashboard
+  Users, Building, BarChart3, Globe, UserCheck, LayoutDashboard, Lock
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
@@ -286,12 +286,29 @@ export default function Home() {
   const router = useRouter();
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [session, setSession] = useState<any>(null);
+  
+  // ESTADO NUEVO: Controla si el usuario está en la lista blanca
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
   const [view, setView] = useState<'MAP' | 'STATS'>('MAP');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    // 1. Verificar Sesión
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        if (session) checkUserAuthorization(session.user.email);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        if (session) {
+            checkUserAuthorization(session.user.email);
+        } else {
+            setIsAuthorized(false); // Reset al salir
+        }
+    });
     
+    // 2. Cargar Datos
     const load = async () => {
       const { data } = await supabase.from('academias').select('*');
       if (data) {
@@ -303,18 +320,15 @@ export default function Home() {
               deporte: d.deporte,
               infraestructura: d.infraestructura,
               usos: d.usos || 'No definido',
-              
               hombres: d.hombres || 0,
               mujeres: d.mujeres || 0,
               usuarios: d.usuarios || 0,
-              
               hombres_0_12: d.hombres_0_12 || 0,
               mujeres_0_12: d.mujeres_0_12 || 0,
               hombres_13_29: d.hombres_13_29 || 0,
               mujeres_13_29: d.mujeres_13_29 || 0,
               hombres_30_mas: d.hombres_30_mas || 0,
               mujeres_30_mas: d.mujeres_30_mas || 0,
-
               departamento: d.departamento,
               municipio: d.municipio,
               distrito: d.distrito,
@@ -326,6 +340,22 @@ export default function Home() {
     };
     load();
   }, []);
+
+  // FUNCIÓN NUEVA: Verifica en Supabase si el correo tiene permiso
+  const checkUserAuthorization = async (email: string | undefined) => {
+      if (!email) return;
+      
+      const { count, error } = await supabase
+        .from('allowed_users')
+        .select('*', { count: 'exact', head: true }) // Solo cuenta, no baja datos
+        .eq('email', email);
+
+      if (!error && count && count > 0) {
+          setIsAuthorized(true);
+      } else {
+          setIsAuthorized(false);
+      }
+  };
 
   const handleLogin = async () => {
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
@@ -375,9 +405,18 @@ export default function Home() {
                   </button>
               </div>
               
-              <button onClick={() => router.push('/registro')} className="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20 transition-all border border-blue-500/50 text-sm">
-                <Plus size={16}/> REGISTRAR INFRAESTRUCTURA
-              </button>
+              {/* LÓGICA DE PROTECCIÓN VISUAL */}
+              {isAuthorized ? (
+                  <button onClick={() => router.push('/registro')} className="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20 transition-all border border-blue-500/50 text-sm">
+                    <Plus size={16}/> REGISTRAR INFRAESTRUCTURA
+                  </button>
+              ) : (
+                  <div className="w-full bg-slate-800/50 p-3 rounded-lg border border-red-900/30 text-center">
+                      <div className="flex justify-center text-red-500 mb-1"><Lock size={16}/></div>
+                      <p className="text-xs text-slate-300 font-bold">Modo Lectura</p>
+                      <p className="text-[9px] text-slate-500 mt-1">No tienes permisos para registrar nuevos datos.</p>
+                  </div>
+              )}
             </div>
           )}
 
