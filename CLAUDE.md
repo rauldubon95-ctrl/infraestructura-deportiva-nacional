@@ -20,13 +20,23 @@ organización deportiva/social sin fines de lucro.
 | Autenticación | Supabase Auth (reservado para panel admin futuro) |
 
 **Repo también contiene:** `centro-monitoreo-deportes/` — proyecto existente de monitoreo
-deportivo con mapa interactivo. **Rescatado y no modificado.**  
-⚠️  Nota de seguridad pendiente en ese proyecto: `centro-monitoreo-deportes/lib/supabase.ts`
-tiene la clave `anon` hardcodeada en lugar de env var. Migrar cuando sea oportuno.
+deportivo con mapa interactivo. **Rescatado.**
+✅ Seguridad corregida: `centro-monitoreo-deportes/lib/supabase.ts` migrado a env vars
+(clave anon eliminada del código fuente). Crear `.env.local` con las vars del `.env.example`.
 
 ---
 
 ## 2. Estado Actual
+
+### ✅ Completado (sesión 2026-05-31 — deploy + auditoría)
+- Supabase `iaolmlfrzjaafmklkoju` restaurado y activo
+- Migración `001_initial_schema_dsf` aplicada: tablas `contact_submissions` + `donation_interests` con RLS
+- Tipos TypeScript generados desde la DB real (`supabase gen types`)
+- `vercel.json` con framework config + env vars públicas (NEXT_PUBLIC_*)
+- `lib/supabase/server.ts`: cliente con fallback anon→service_role (deploy inmediato sin secrets)
+- `package.json`: `overrides.postcss ^8.5.10` → **0 vulnerabilidades** (`npm audit`)
+- `centro-monitoreo-deportes/lib/supabase.ts`: clave hardcodeada → env vars ✅ seguro
+- **Deploy pendiente**: requiere conectar repo en Vercel Dashboard (ver §8)
 
 ### ✅ Completado (sesión inicial 2026-05-31)
 - Arquitectura y árbol de archivos completo
@@ -211,8 +221,8 @@ Ver §7 — Lista de TODO
 | 6.5 | CSRF: route handler Next.js | ✅ | Same-origin enforced por Next.js route handlers |
 | 6.6 | Sin `dangerouslySetInnerHTML` | ✅ | No usado en esta versión |
 | 6.6 | Links externos con `noopener noreferrer` | ✅ | En todos los componentes |
-| 6.7 | `npm audit` limpio | 🔶 | Ejecutar tras `npm install` |
-| 6.7 | Lockfile commiteado | 🔶 | Ejecutar `npm install` y commitear `package-lock.json` |
+| 6.7 | `npm audit` limpio | ✅ | 0 vulnerabilidades. `overrides.postcss ^8.5.10` en package.json |
+| 6.7 | Lockfile commiteado | ✅ | `package-lock.json` commiteado |
 | 6.7 | Analítica sin cookies | 🔶 | Plausible/Umami pendiente de configurar |
 
 **Fuera del alcance de este código** (documentado, no ignorado):
@@ -256,13 +266,36 @@ El cliente debe proveer los siguientes datos antes de hacer deploy productivo:
 
 ---
 
-## 8. Cómo Retomar
+## 8. Cómo Retomar / Deploy Pendiente
+
+### Pasos para completar el deploy en Vercel (requiere acceso al Dashboard)
+
+1. Ir a **vercel.com/new** → "Import Git Repository"
+2. Seleccionar `rauldubon95-ctrl/infraestructura-deportiva-nacional`
+3. **Root Directory:** `/` (dejar vacío = raíz)
+4. En **Environment Variables** añadir:
+
+| Variable | Dónde obtenerla |
+|----------|----------------|
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → service_role |
+| `ADMIN_EMAIL` | Email de notificaciones del admin |
+
+   Las claves `NEXT_PUBLIC_*` ya están en `vercel.json` y se aplican automáticamente.
+
+5. Click **Deploy** → esperar build (~2 min)
+6. La URL de producción será `https://<proyecto>.vercel.app`
+
+### Para retomar desarrollo
 
 1. Lee este archivo desde la sección "Estado Actual"
-2. Revisa la checklist de seguridad (§6) para ver qué falta
-3. Los TODO activos están en `config/content.ts` y `config/site.config.ts`
-4. Para añadir una sección: crear `components/sections/NuevaSección.tsx` + agregar entrada en `config/sections.config.ts`
-5. Para deploy: `cd <raíz>`, `npm install`, configurar vars de entorno en Vercel, aplicar migración en Supabase
+2. Los TODO activos están en `config/content.ts` y `config/site.config.ts`
+3. Para añadir una sección: crear `components/sections/NuevaSección.tsx` + agregar entrada en `config/sections.config.ts`
+
+### Supabase — ya configurado
+
+- Proyecto: `iaolmlfrzjaafmklkoju` (activo, región us-west-2)
+- Tablas: `contact_submissions`, `donation_interests`
+- RLS: anon puede INSERT; solo service_role puede SELECT
 
 ---
 

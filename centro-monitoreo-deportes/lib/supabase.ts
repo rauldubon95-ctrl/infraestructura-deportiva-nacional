@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// TU URL
-const supabaseUrl = 'https://iaolmlfrzjaafmklkoju.supabase.co';
+// Las credenciales deben estar en variables de entorno, NUNCA hardcodeadas.
+// Crear .env.local con:
+//   NEXT_PUBLIC_SUPABASE_URL=https://iaolmlfrzjaafmklkoju.supabase.co
+//   NEXT_PUBLIC_SUPABASE_ANON_KEY=<tu clave anon del Dashboard>
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// TU LLAVE REAL (La recuperé de tu mensaje anterior)
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhb2xtbGZyemphYWZta2xrb2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzOTQyNzcsImV4cCI6MjA4NTk3MDI3N30.BgU9q4VasKJ27ppWlNjufhm-NfF5qx9j98jJwssdFAY';
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Faltan NEXT_PUBLIC_SUPABASE_URL y/o NEXT_PUBLIC_SUPABASE_ANON_KEY. ' +
+    'Crea un archivo .env.local con estas variables.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
