@@ -1,6 +1,5 @@
-// Tipos de la base de datos Supabase.
-// Actualizar ejecutando: npx supabase gen types typescript --project-id <id> > lib/supabase/types.ts
-// Formato requerido por @supabase/supabase-js v2.x
+// Tipos generados automáticamente por Supabase.
+// Regenerar con: npx supabase gen types typescript --project-id iaolmlfrzjaafmklkoju > lib/supabase/types.ts
 
 export type Json =
   | string
@@ -8,72 +7,186 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
-export interface Database {
+export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
+      // Tabla del proyecto centro-monitoreo-deportes (mismo proyecto Supabase)
+      academias: {
+        Row: {
+          beneficiarios: string | null
+          created_at: string
+          departamento: string | null
+          deporte: string | null
+          distrito: string | null
+          hombres: number | null
+          hombres_0_12: number | null
+          hombres_13_29: number | null
+          hombres_30_mas: number | null
+          id: number
+          infraestructura: string | null
+          lat: number
+          lng: number
+          mujeres: number | null
+          mujeres_0_12: number | null
+          mujeres_13_29: number | null
+          mujeres_30_mas: number | null
+          municipio: string | null
+          nombre: string
+          objetivos: string | null
+          responsable: string | null
+          usos: string | null
+          usuarios: number | null
+        }
+        Insert: {
+          beneficiarios?: string | null
+          created_at?: string
+          departamento?: string | null
+          deporte?: string | null
+          distrito?: string | null
+          hombres?: number | null
+          hombres_0_12?: number | null
+          hombres_13_29?: number | null
+          hombres_30_mas?: number | null
+          id?: number
+          infraestructura?: string | null
+          lat: number
+          lng: number
+          mujeres?: number | null
+          mujeres_0_12?: number | null
+          mujeres_13_29?: number | null
+          mujeres_30_mas?: number | null
+          municipio?: string | null
+          nombre: string
+          objetivos?: string | null
+          responsable?: string | null
+          usos?: string | null
+          usuarios?: number | null
+        }
+        Update: {
+          beneficiarios?: string | null
+          created_at?: string
+          departamento?: string | null
+          deporte?: string | null
+          distrito?: string | null
+          hombres?: number | null
+          hombres_0_12?: number | null
+          hombres_30_mas?: number | null
+          id?: number
+          infraestructura?: string | null
+          lat?: number
+          lng?: number
+          mujeres?: number | null
+          mujeres_0_12?: number | null
+          mujeres_13_29?: number | null
+          mujeres_30_mas?: number | null
+          municipio?: string | null
+          nombre?: string
+          objetivos?: string | null
+          responsable?: string | null
+          usos?: string | null
+          usuarios?: number | null
+        }
+        Relationships: []
+      }
+      allowed_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      // Tablas DSF — Asociación Deportes Sin Fronteras
       contact_submissions: {
         Row: {
-          id: string;
-          name: string;
-          email: string;
-          message: string;
-          ip_hash: string | null;
-          created_at: string;
-        };
+          created_at: string
+          email: string
+          id: string
+          ip_hash: string | null
+          message: string
+          name: string
+        }
         Insert: {
-          id?: string;
-          name: string;
-          email: string;
-          message: string;
-          ip_hash?: string | null;
-          created_at?: string;
-        };
+          created_at?: string
+          email: string
+          id?: string
+          ip_hash?: string | null
+          message: string
+          name: string
+        }
         Update: {
-          id?: string;
-          name?: string;
-          email?: string;
-          message?: string;
-          ip_hash?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          email?: string
+          id?: string
+          ip_hash?: string | null
+          message?: string
+          name?: string
+        }
+        Relationships: []
+      }
       donation_interests: {
         Row: {
-          id: string;
-          email: string;
-          tier: "amigo" | "defensor" | "campeon" | "patron";
-          created_at: string;
-        };
+          created_at: string
+          email: string
+          id: string
+          tier: string
+        }
         Insert: {
-          id?: string;
-          email: string;
-          tier: "amigo" | "defensor" | "campeon" | "patron";
-          created_at?: string;
-        };
+          created_at?: string
+          email: string
+          id?: string
+          tier: string
+        }
         Update: {
-          id?: string;
-          email?: string;
-          tier?: "amigo" | "defensor" | "campeon" | "patron";
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+          created_at?: string
+          email?: string
+          id?: string
+          tier?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
     Enums: {
-      donation_tier: "amigo" | "defensor" | "campeon" | "patron";
-    };
-    CompositeTypes: Record<string, never>;
-  };
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-// Helpers de tipo para uso en la app
-export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
-export type InsertDTO<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"];
+export type Tables<
+  T extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+> = (DefaultSchema["Tables"] & DefaultSchema["Views"])[T] extends { Row: infer R } ? R : never
+
+export type TablesInsert<
+  T extends keyof DefaultSchema["Tables"]
+> = DefaultSchema["Tables"][T] extends { Insert: infer I } ? I : never
+
+export type TablesUpdate<
+  T extends keyof DefaultSchema["Tables"]
+> = DefaultSchema["Tables"][T] extends { Update: infer U } ? U : never
