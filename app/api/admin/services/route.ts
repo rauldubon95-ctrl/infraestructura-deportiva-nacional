@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { verifyAdmin } from "@/lib/supabase/admin-auth";
+import { verifyAdminCookie } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const serviceUpsertSchema = z.object({
@@ -16,8 +16,9 @@ const serviceUpsertSchema = z.object({
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!await verifyAdminCookie(request.cookies)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
 
   try {
     const { data, error } = await createAdminClient()
@@ -33,8 +34,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!await verifyAdminCookie(request.cookies)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
 
   let body: unknown;
   try { body = await request.json(); }
@@ -51,13 +53,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const supabase = createAdminClient();
 
     if (id) {
-      // Actualizar
       const { error } = await supabase.from("services").update(rest).eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ success: true });
     }
 
-    // Crear
     const { data, error } = await supabase.from("services").insert(rest).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 201 });
@@ -67,15 +67,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!await verifyAdminCookie(request.cookies)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID requerido." }, { status: 400 });
 
   try {
-    // Soft-delete: desactivar en lugar de borrar físicamente
     const { error } = await createAdminClient()
       .from("services")
       .update({ active: false })

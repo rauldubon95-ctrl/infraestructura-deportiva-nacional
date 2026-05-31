@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Orígenes permitidos para connect-src (Supabase project URL).
-// El try/catch evita que una URL mal formada en el env var rompa todos los requests.
 let SUPABASE_HOST = "";
 try {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -13,6 +11,16 @@ try {
 }
 
 export function middleware(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl;
+
+  // Protect admin routes — redirect to login if cookie absent
+  if (pathname.startsWith("/admin/") && pathname !== "/admin/login") {
+    const cookie = request.cookies.get("dsf_admin");
+    if (!cookie?.value) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+
   const response = NextResponse.next();
 
   const connectSrc = [
@@ -23,10 +31,6 @@ export function middleware(request: NextRequest): NextResponse {
     .filter(Boolean)
     .join(" ");
 
-  // Content-Security-Policy restrictiva.
-  // 'unsafe-inline' en style-src es necesario porque Next.js inyecta
-  // estilos críticos inline y Tailwind JIT en desarrollo.
-  // Trade-off documentado en CLAUDE.md §3.
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -43,28 +47,13 @@ export function middleware(request: NextRequest): NextResponse {
   ].join("; ");
 
   response.headers.set("Content-Security-Policy", csp);
-
-  // Strict Transport Security: 2 años, incluir subdominios, preload
-  response.headers.set(
-    "Strict-Transport-Security",
-    "max-age=63072000; includeSubDomains; preload",
-  );
-
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-
-  // Bloquear acceso a sensores que no se usan
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
-  );
-
-  // Evitar sniffing del tipo MIME en scripts
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
-
-  // Eliminar cabecera que expone tecnología
   response.headers.delete("X-Powered-By");
 
   return response;
@@ -72,7 +61,6 @@ export function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    // Aplicar a todas las rutas excepto archivos estáticos de Next.js
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

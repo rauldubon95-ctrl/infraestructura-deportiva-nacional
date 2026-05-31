@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/supabase/admin-auth";
+import { verifyAdminCookie } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) {
+  if (!await verifyAdminCookie(request.cookies)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
-  const page    = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit   = 20;
-  const offset  = (page - 1) * limit;
+  const page     = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit    = 20;
+  const offset   = (page - 1) * limit;
   const reviewed = searchParams.get("reviewed");
 
   try {
@@ -40,8 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) {
+  if (!await verifyAdminCookie(request.cookies)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

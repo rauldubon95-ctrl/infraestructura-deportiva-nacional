@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { Plus, Edit2, Eye, EyeOff, Loader2, X, CheckCircle } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import { categoryMeta, CATEGORIES_ORDER, type ServiceCategory } from "@/config/services.config";
 import type { Tables } from "@/lib/supabase/types";
 
@@ -31,13 +30,7 @@ export default function ServiciosAdminPage() {
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = createBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch("/api/admin/services", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const res  = await fetch("/api/admin/services");
       const json = await res.json();
       setServices(json.data ?? []);
     } finally {
@@ -64,13 +57,9 @@ export default function ServiciosAdminPage() {
   }
 
   async function toggleActive(s: ServiceRow) {
-    const supabase = createBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
     await fetch("/api/admin/services", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: s.id, slug: s.slug, name: s.name, description: s.description,
         category: s.category, icon_name: s.icon_name, featured: s.featured, active: !s.active, sort_order: s.sort_order }),
     });
@@ -83,15 +72,11 @@ export default function ServiciosAdminPage() {
     setSaving(true); setSaveErr(""); setSaveOk(false);
 
     try {
-      const supabase = createBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
       const payload = { ...formData, id: formData.id || undefined };
 
-      const res = await fetch("/api/admin/services", {
+      const res  = await fetch("/api/admin/services", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const json = await res.json();

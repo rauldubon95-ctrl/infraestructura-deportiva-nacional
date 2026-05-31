@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Clock, RefreshCw, Eye, Mail, MailCheck, ChevronLeft, ChevronRight } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 type ContactMsg = {
   id: string;
@@ -42,22 +41,11 @@ export default function MensajesPage() {
   const LIMIT = 20;
   const totalPages = Math.ceil(count / LIMIT);
 
-  const getToken = async () => {
-    const supabase = createBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ?? null;
-  };
-
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await getToken();
-      if (!token) return;
-
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
-      const res = await fetch(`/api/admin/messages?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res  = await fetch(`/api/admin/messages?${params}`);
       const json = await res.json();
       setData(json.data ?? []);
       setCount(json.count ?? 0);
@@ -81,10 +69,9 @@ export default function MensajesPage() {
     setSendStatus("sending");
     setSendError("");
     try {
-      const token = await getToken();
       const res = await fetch("/api/admin/reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id:             replying.id,
           type:           "contact",

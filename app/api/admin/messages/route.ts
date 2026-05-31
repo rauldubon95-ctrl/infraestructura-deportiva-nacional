@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/supabase/admin-auth";
+import { verifyAdminCookie } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const admin = await verifyAdmin(request.headers.get("Authorization"));
-  if (!admin) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!await verifyAdminCookie(request.cookies)) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
 
   const { searchParams } = new URL(request.url);
-  const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10));
-  const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20", 10));
+  const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10));
+  const limit  = Math.min(50, parseInt(searchParams.get("limit") ?? "20", 10));
   const offset = (page - 1) * limit;
 
   try {

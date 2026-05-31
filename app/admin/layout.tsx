@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Inbox, MessageSquare, Settings, LogOut, Shield, Menu, X } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 const NAV = [
   { href: "/admin/cotizaciones", label: "Cotizaciones", icon: MessageSquare },
@@ -15,77 +14,28 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [ready,    setReady]    = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [email,    setEmail]    = useState("");
-
-  // Verificar sesión al cargar
-  useEffect(() => {
-    async function checkAuth() {
-      if (pathname === "/admin/login") { setReady(true); return; }
-
-      try {
-        const supabase = createBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          router.replace("/admin/login");
-          return;
-        }
-
-        // Verificar autorización contra la API
-        const res = await fetch("/api/admin/quotations?page=1", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-
-        if (res.status === 401 || res.status === 403) {
-          await supabase.auth.signOut();
-          router.replace("/admin/login");
-          return;
-        }
-
-        setEmail(session.user.email ?? "");
-        setReady(true);
-      } catch {
-        router.replace("/admin/login");
-      }
-    }
-    checkAuth();
-  }, [pathname, router]);
 
   async function handleSignOut() {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
+    await fetch("/api/admin/auth", { method: "DELETE" });
     router.push("/admin/login");
   }
 
-  // Login page: no aplica layout
   if (pathname === "/admin/login") return <>{children}</>;
-
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* ── Sidebar desktop ──────────────────────────────────────────────── */}
       <aside className="hidden lg:flex w-56 flex-col bg-white border-r border-gray-100 fixed inset-y-0">
-        {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <Shield className="text-white" size={16} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">Admin DSF</p>
-            <p className="text-[10px] text-gray-400 truncate">{email}</p>
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 py-4 px-3 space-y-1" aria-label="Navegación admin">
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link
@@ -104,7 +54,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        {/* Sign out */}
         <div className="p-3 border-t border-gray-100">
           <button
             onClick={handleSignOut}
