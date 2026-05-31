@@ -1,6 +1,6 @@
 # CLAUDE.md — Registro Vivo del Proyecto
 **Asociación Deportes Sin Fronteras** · Sitio Institucional  
-Última actualización: 2026-05-31
+Última actualización: 2026-05-31 (deploy fix: Root Directory corregido en Vercel)
 
 ---
 
