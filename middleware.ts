@@ -15,9 +15,6 @@ try {
 export function middleware(request: NextRequest): NextResponse {
   const response = NextResponse.next();
 
-  // Nonce por request para script-src con 'strict-dynamic'
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-
   const connectSrc = [
     "'self'",
     SUPABASE_HOST ? `https://${SUPABASE_HOST}` : "",
@@ -32,7 +29,7 @@ export function middleware(request: NextRequest): NextResponse {
   // Trade-off documentado en CLAUDE.md §3.
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
@@ -46,8 +43,6 @@ export function middleware(request: NextRequest): NextResponse {
   ].join("; ");
 
   response.headers.set("Content-Security-Policy", csp);
-  // Exponer nonce a Server Components via cabecera (no al cliente)
-  response.headers.set("x-nonce", nonce);
 
   // Strict Transport Security: 2 años, incluir subdominios, preload
   response.headers.set(
