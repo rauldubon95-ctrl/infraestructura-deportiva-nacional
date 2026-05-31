@@ -15,7 +15,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      // Tabla del proyecto centro-monitoreo-deportes (mismo proyecto Supabase)
       academias: {
         Row: {
           beneficiarios: string | null
@@ -75,6 +74,7 @@ export type Database = {
           distrito?: string | null
           hombres?: number | null
           hombres_0_12?: number | null
+          hombres_13_29?: number | null
           hombres_30_mas?: number | null
           id?: number
           infraestructura?: string | null
@@ -111,7 +111,6 @@ export type Database = {
         }
         Relationships: []
       }
-      // Tablas DSF — Asociación Deportes Sin Fronteras
       contact_submissions: {
         Row: {
           created_at: string
@@ -120,6 +119,8 @@ export type Database = {
           ip_hash: string | null
           message: string
           name: string
+          replied_at: string | null
+          reply_text: string | null
         }
         Insert: {
           created_at?: string
@@ -128,6 +129,8 @@ export type Database = {
           ip_hash?: string | null
           message: string
           name: string
+          replied_at?: string | null
+          reply_text?: string | null
         }
         Update: {
           created_at?: string
@@ -136,6 +139,8 @@ export type Database = {
           ip_hash?: string | null
           message?: string
           name?: string
+          replied_at?: string | null
+          reply_text?: string | null
         }
         Relationships: []
       }
@@ -160,91 +165,96 @@ export type Database = {
         }
         Relationships: []
       }
-      // Tablas de consultoría profesional
-      services: {
+      quotation_requests: {
         Row: {
-          id: string
-          slug: string
-          name: string
-          description: string
-          category: string
-          icon_name: string
-          featured: boolean
-          active: boolean
-          sort_order: number
+          budget: string | null
           created_at: string
+          description: string
+          email: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          ip_hash: string | null
+          name: string
+          organization: string | null
+          replied_at: string | null
+          reply_text: string | null
+          reviewed: boolean
+          service_name: string
+          service_slug: string
         }
         Insert: {
-          id?: string
-          slug: string
-          name: string
-          description: string
-          category: string
-          icon_name?: string
-          featured?: boolean
-          active?: boolean
-          sort_order?: number
+          budget?: string | null
           created_at?: string
+          description: string
+          email: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          ip_hash?: string | null
+          name: string
+          organization?: string | null
+          replied_at?: string | null
+          reply_text?: string | null
+          reviewed?: boolean
+          service_name: string
+          service_slug: string
         }
         Update: {
-          id?: string
-          slug?: string
-          name?: string
-          description?: string
-          category?: string
-          icon_name?: string
-          featured?: boolean
-          active?: boolean
-          sort_order?: number
+          budget?: string | null
           created_at?: string
+          description?: string
+          email?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          ip_hash?: string | null
+          name?: string
+          organization?: string | null
+          replied_at?: string | null
+          reply_text?: string | null
+          reviewed?: boolean
+          service_name?: string
+          service_slug?: string
         }
         Relationships: []
       }
-      quotation_requests: {
+      services: {
         Row: {
+          active: boolean
+          category: Database["public"]["Enums"]["service_category"]
+          created_at: string
+          description: string
+          featured: boolean
+          icon_name: string
           id: string
           name: string
-          email: string
-          organization: string | null
-          service_slug: string
-          service_name: string
-          description: string
-          budget: string | null
-          file_path: string | null
-          file_name: string | null
-          ip_hash: string | null
-          reviewed: boolean
-          created_at: string
+          slug: string
+          sort_order: number
         }
         Insert: {
+          active?: boolean
+          category: Database["public"]["Enums"]["service_category"]
+          created_at?: string
+          description: string
+          featured?: boolean
+          icon_name?: string
           id?: string
           name: string
-          email: string
-          organization?: string | null
-          service_slug: string
-          service_name: string
-          description: string
-          budget?: string | null
-          file_path?: string | null
-          file_name?: string | null
-          ip_hash?: string | null
-          reviewed?: boolean
-          created_at?: string
+          slug: string
+          sort_order?: number
         }
         Update: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["service_category"]
+          created_at?: string
+          description?: string
+          featured?: boolean
+          icon_name?: string
           id?: string
           name?: string
-          email?: string
-          organization?: string | null
-          service_slug?: string
-          service_name?: string
-          description?: string
-          budget?: string | null
-          file_path?: string | null
-          file_name?: string | null
-          ip_hash?: string | null
-          reviewed?: boolean
-          created_at?: string
+          slug?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -256,7 +266,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      service_category:
+        | "formulacion"
+        | "monitoreo"
+        | "datos"
+        | "investigacion"
+        | "instrumentos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -265,16 +280,132 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  T extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-> = (DefaultSchema["Tables"] & DefaultSchema["Views"])[T] extends { Row: infer R } ? R : never
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
 export type TablesInsert<
-  T extends keyof DefaultSchema["Tables"]
-> = DefaultSchema["Tables"][T] extends { Insert: infer I } ? I : never
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
 export type TablesUpdate<
-  T extends keyof DefaultSchema["Tables"]
-> = DefaultSchema["Tables"][T] extends { Update: infer U } ? U : never
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      service_category: [
+        "formulacion",
+        "monitoreo",
+        "datos",
+        "investigacion",
+        "instrumentos",
+      ],
+    },
+  },
+} as const
