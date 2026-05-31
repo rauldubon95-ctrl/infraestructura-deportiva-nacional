@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scroll suave a nivel de sistema — respetar prefers-reduced-motion */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Base accesible */
+:root {
+  --font-inter: "Inter", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Foco visible universal — no remover sin reemplazar */
+:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+}
+
+body {
+  @apply font-sans antialiased text-gray-900 bg-white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Skip to main content para lectores de pantalla */
+.skip-link {
+  @apply absolute -top-full left-4 z-[100] px-4 py-2 bg-brand-600 text-white font-semibold rounded-b-lg;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  @apply top-0;
+}
+
+/* Imagen hero con overlay — optimización de paint */
+.hero-bg {
+  will-change: transform;
+  transform: translateZ(0);
+}

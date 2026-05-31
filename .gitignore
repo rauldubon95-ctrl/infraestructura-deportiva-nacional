@@ -1,0 +1,62 @@
+# ─── Dependencias ───────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Artefactos de build ─────────────────────────────────────────────────────
+.next/
+out/
+dist/
+build/
+
+# Proyecto hermano
+centro-monitoreo-deportes/.next/
+centro-monitoreo-deportes/node_modules/
+centro-monitoreo-deportes/dist/
+
+# ─── Variables de entorno (NUNCA commitear valores reales) ───────────────────
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+!.env.example
+!.env.*.example
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# ─── TypeScript ──────────────────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Editores ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ─── Sistema operativo ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Vercel ──────────────────────────────────────────────────────────────────
+.vercel
+
+# ─── Misc ────────────────────────────────────────────────────────────────────
+.cache/
+*.pid
+*.seed
+coverage/
+.nyc_output/
