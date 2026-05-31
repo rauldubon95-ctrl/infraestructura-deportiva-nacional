@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Orígenes permitidos para connect-src (Supabase project URL)
-// Se actualiza cuando se configura el proyecto Supabase real.
-const SUPABASE_HOST = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-  : "";
+// Orígenes permitidos para connect-src (Supabase project URL).
+// El try/catch evita que una URL mal formada en el env var rompa todos los requests.
+let SUPABASE_HOST = "";
+try {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    SUPABASE_HOST = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname;
+  }
+} catch {
+  // URL inválida — connect-src queda restringido a 'self'
+}
 
 export function middleware(request: NextRequest): NextResponse {
   const response = NextResponse.next();

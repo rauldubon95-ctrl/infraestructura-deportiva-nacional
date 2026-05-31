@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { contactSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { sanitizeName, sanitizeText, hashIp } from "@/lib/sanitize";
-import { createBestAvailableClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+
+const IP_REGEX = /^(?:\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // ── 1. Rate limiting por IP ─────────────────────────────────────────────
   const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0].trim() : "anonymous";
+  const rawIp = forwarded ? forwarded.split(",")[0].trim() : "";
+  const ip = rawIp && IP_REGEX.test(rawIp) ? rawIp : "anonymous";
   const limit = rateLimit(ip, 5, 60_000);
 
   if (!limit.success) {
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   // ── 6. Persistir en Supabase ─────────────────────────────────────────────
   try {
-    const supabase = createBestAvailableClient();
+    const supabase = createAdminClient();
     const { error } = await supabase.from("contact_submissions").insert({
       name:       cleanName,
       email:      cleanEmail,

@@ -80,12 +80,13 @@ export function validateUploadedFile(
 }
 
 /**
- * Hash simple de IP para logs/rate-limit sin almacenar la IP completa.
- * No es criptográficamente seguro para secretos, solo para ofuscación de PII.
+ * Hash de IP para logs/rate-limit sin almacenar la IP completa (ofuscación PII).
+ * Usa IP_HASH_SALT (variable privada de servidor) como sal.
  */
 export async function hashIp(ip: string): Promise<string> {
+  const salt = process.env.IP_HASH_SALT ?? "dsf-placeholder-salt-set-IP_HASH_SALT-in-env";
   const encoder = new TextEncoder();
-  const data = encoder.encode(ip + (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "salt"));
+  const data = encoder.encode(ip + salt);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);

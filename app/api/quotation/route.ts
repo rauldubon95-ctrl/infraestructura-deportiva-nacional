@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { quotationSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { sanitizeName, sanitizeText, sanitizeOrg, validateUploadedFile, hashIp } from "@/lib/sanitize";
-import { createBestAvailableClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+
+// Regex para validar formato de IP (IPv4 o IPv6 compacto)
+const IP_REGEX = /^(?:\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i;
 
 // Cotizaciones: límite más estricto (3 por 10 min por IP)
 const RATE_LIMIT = 3;
@@ -11,7 +14,9 @@ const RATE_WINDOW_MS = 10 * 60 * 1000;
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // ── 1. Rate limiting ────────────────────────────────────────────────────────
   const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0].trim() : "anonymous";
+  const rawIp = forwarded ? forwarded.split(",")[0].trim() : "";
+  // Validar formato para prevenir header injection; "anonymous" como fallback seguro
+  const ip = rawIp && IP_REGEX.test(rawIp) ? rawIp : "anonymous";
   const limit = rateLimit(`quotation:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
 
   if (!limit.success) {
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const storagePath  = `quotations/${new Date().toISOString().slice(0, 7)}/${safeFileName}`;
 
     try {
-      const supabase = createBestAvailableClient();
+      const supabase = createAdminClient();
       const arrayBuffer = await fileEntry.arrayBuffer();
       const { error: uploadError } = await supabase.storage
         .from("quotation-attachments")
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   // ── 7. Persistir cotización en Supabase ─────────────────────────────────────
   try {
-    const supabase = createBestAvailableClient();
+    const supabase = createAdminClient();
     const { error } = await supabase.from("quotation_requests").insert({
       name:         cleanName,
       email:        cleanEmail,

@@ -17,6 +17,10 @@ export async function verifyAdmin(
   const token = authHeader.slice(7).trim();
   if (!token) return null;
 
+  // Validación de formato JWT (header.payload.signature) antes de llamar a Supabase
+  const parts = token.split(".");
+  if (parts.length !== 3 || token.length < 20 || token.length > 2048) return null;
+
   try {
     const supabase = createBestAvailableClient();
     const {
