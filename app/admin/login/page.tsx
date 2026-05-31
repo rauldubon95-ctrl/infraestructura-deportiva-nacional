@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (authError) {
-        setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+        setError(`Auth error: ${authError.message}`);
         return;
       }
 
@@ -48,8 +48,9 @@ export default function AdminLoginPage() {
       }
 
       router.push("/admin/cotizaciones");
-    } catch {
-      setError("Error de conexión. Intenta de nuevo.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }
