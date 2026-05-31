@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, MessageSquare, Settings, LogOut, Shield, Menu, X } from "lucide-react";
+import { Inbox, MessageSquare, Settings, LogOut, Shield, Menu, X } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase/browser";
 
 const NAV = [
-  { href: "/admin/cotizaciones", label: "Cotizaciones",  icon: MessageSquare },
-  { href: "/admin/servicios",    label: "Servicios",     icon: Settings },
+  { href: "/admin/cotizaciones", label: "Cotizaciones", icon: MessageSquare },
+  { href: "/admin/mensajes",     label: "Mensajes",     icon: Inbox },
+  { href: "/admin/servicios",    label: "Servicios",    icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
