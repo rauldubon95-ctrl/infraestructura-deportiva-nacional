@@ -1,6 +1,6 @@
 # CLAUDE.md — Registro Vivo del Proyecto
 **Asociación Deportes Sin Fronteras** · Sitio Institucional  
-Última actualización: 2026-05-31 (deploy fix: Root Directory corregido en Vercel)
+Última actualización: 2026-05-31 (sesión auth rewrite)
 
 ---
 
@@ -10,74 +10,63 @@ Sitio web institucional de una sola página para la **Asociación Deportes Sin F
 organización deportiva/social sin fines de lucro.
 
 | Aspecto | Detalle |
-|---------|---------|
+|---------|----------|
 | Tipo | Landing institucional SPA (scroll) |
 | Idioma | Español (`lang="es"`) |
 | Color de marca | `#ea580c` (naranja) |
 | Frontend | Next.js 15 · App Router · TypeScript `strict` · Tailwind CSS v3 |
-| Deploy | Vercel |
-| Backend / datos | Supabase (Postgres + RLS + Edge Functions) |
-| Autenticación | Supabase Auth (reservado para panel admin futuro) |
+| Deploy | Vercel (proyecto `prj_OkffioASh5es7J1dJozi4iSiKF0q`, team `team_81Sfz6htjfh0Chb0Bk4iMvbU`) |
+| URL producción | `https://infraestructura-deportiva-nacional.vercel.app` |
+| Backend / datos | Supabase proyecto `iaolmlfrzjaafmklkoju` (us-west-2, ACTIVE_HEALTHY) |
+| Autenticación admin | Cookie httpOnly firmada con HMAC-SHA256 (ver §9) |
 
 **Repo también contiene:** `centro-monitoreo-deportes/` — proyecto existente de monitoreo
-deportivo con mapa interactivo. **Rescatado.**
-✅ Seguridad corregida: `centro-monitoreo-deportes/lib/supabase.ts` migrado a env vars
-(clave anon eliminada del código fuente). Crear `.env.local` con las vars del `.env.example`.
+deportivo con mapa interactivo. No modificar.
 
 ---
 
 ## 2. Estado Actual
 
-### ✅ Completado (sesión 2026-05-31 — deploy + auditoría)
-- Supabase `iaolmlfrzjaafmklkoju` restaurado y activo
-- Migración `001_initial_schema_dsf` aplicada: tablas `contact_submissions` + `donation_interests` con RLS
-- Tipos TypeScript generados desde la DB real (`supabase gen types`)
-- `vercel.json` con framework config + env vars públicas (NEXT_PUBLIC_*)
-- `lib/supabase/server.ts`: cliente con fallback anon→service_role (deploy inmediato sin secrets)
-- `package.json`: `overrides.postcss ^8.5.10` → **0 vulnerabilidades** (`npm audit`)
-- `centro-monitoreo-deportes/lib/supabase.ts`: clave hardcodeada → env vars ✅ seguro
-- **Deploy pendiente**: requiere conectar repo en Vercel Dashboard (ver §8)
+### ✅ Completado (sesión 2026-05-31 — auth rewrite)
+- Sistema de login admin reescrito completamente: ya NO depende de Supabase Auth ni del cliente browser
+- Nuevo `lib/admin-session.ts`: token HMAC-SHA256 vía Web Crypto API (compatible Edge + Node)
+- Nuevo `app/api/admin/auth/route.ts`: POST (login → cookie) / DELETE (logout → borra cookie)
+- `middleware.ts` actualizado: protege `/admin/*` a nivel de servidor redirigiendo a `/admin/login` si no hay cookie
+- `app/admin/login/page.tsx`: solo campo contraseña, sin correo, sin Supabase
+- `app/admin/layout.tsx`: simplificado, sin Supabase, logout vía DELETE
+- Las 4 rutas API admin (`quotations`, `messages`, `reply`, `services`) usan `verifyAdminCookie` en vez de Bearer JWT
+- Las 3 páginas admin (`cotizaciones`, `mensajes`, `servicios`) usan `fetch` directo sin tokens
+- `ADMIN_PASSWORD` removido de `vercel.json` — se configura como secreto en Vercel Dashboard
 
-### ✅ Completado (sesión inicial 2026-05-31)
+### ⚠️ PENDIENTE CRÍTICO — variables de entorno en Vercel Dashboard
+
+El sitio (no el admin) usa `createBrowserClient()` para formularios de contacto. Si aparece el error
+`"Faltan variables de entorno públicas de Supabase"` en producción, significa que las variables
+`NEXT_PUBLIC_*` que están en `vercel.json` no se están aplicando en ese deployment.
+
+**Solución:** ir a Vercel Dashboard → proyecto → Settings → Environment Variables y verificar/agregar:
+
+| Variable | Valor | Tipo |
+|----------|-------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://iaolmlfrzjaafmklkoju.supabase.co` | Plain text |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (ver §9 — es la clave pública anon, no un secreto) | Plain text |
+| `ADMIN_PASSWORD` | la contraseña que elijas para el panel admin | **Secret** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → service_role | **Secret** |
+
+Después de agregar o modificar variables → **Redeploy** desde Deployments para que el build las tome.
+
+### ✅ Completado (sesiones anteriores)
 - Arquitectura y árbol de archivos completo
-- `CLAUDE.md` inicializado
-- `.gitignore`, `.env.example` (sin valores reales)
-- `package.json`, `tsconfig.json` (TypeScript strict)
-- `tailwind.config.ts` con tokens de marca
-- `postcss.config.mjs`
-- `next.config.ts` (poweredByHeader: false, allowlist de imágenes vacía)
-- `middleware.ts` con todas las cabeceras de seguridad (CSP, HSTS, COOP, etc.)
-- `config/site.config.ts` — metadatos del sitio
-- `config/theme.ts` — paleta derivada de #ea580c
-- `config/content.ts` — TODOS los textos tipados con Zod (placeholders TODO)
-- `config/sections.config.ts` — registro de secciones activas
-- `lib/validation.ts` — esquemas Zod (contacto, donación)
-- `lib/sanitize.ts` — saneamiento de entrada
-- `lib/rate-limit.ts` — control de tasa por IP (en memoria; ver §3 trade-offs)
-- `lib/supabase/server.ts` — cliente admin server-side (service_role)
-- `lib/supabase/browser.ts` — cliente público browser (anon key)
-- `lib/supabase/types.ts` — tipos generados de la DB
-- Todos los componentes UI (`Button`, `Card`, `StatCard`, `SectionHeader`, `DonationCard`, `ActivityCard`)
-- Todos los componentes de layout (`Navbar`, `Footer`, `FloatingContact`)
-- Todas las secciones (`UrgentBanner`, `Hero`, `ImpactStats`, `About`, `Programs`,
-  `History`, `Transparency`, `DonationLevels`, `CommunityCTA`, `DualCTA`, `SocialProof`)
-- `app/globals.css`, `app/layout.tsx`, `app/page.tsx`
-- `app/api/contact/route.ts` — manejo server-side del formulario
-- `supabase/migrations/001_initial_schema.sql` — tablas + RLS
-- `supabase/functions/contact-notify/index.ts` — Edge Function notificación
-- `README.md` actualizado
+- Supabase `iaolmlfrzjaafmklkoju` restaurado, migración `001_initial_schema_dsf` aplicada
+- Tablas: `contact_submissions`, `donation_interests`, `quotation_requests`, `services` con RLS
+- Panel admin completo: cotizaciones, mensajes, servicios, respuesta por email (Resend)
+- `vercel.json` con framework config y vars `NEXT_PUBLIC_*`
+- `middleware.ts` con CSP, HSTS, X-Frame-Options, Permissions-Policy, COOP, CRP
+- 0 vulnerabilidades npm (`overrides.postcss ^8.5.10`)
+- `centro-monitoreo-deportes/lib/supabase.ts`: clave hardcodeada eliminada → env vars
 
 ### 🔶 Pendiente (datos reales del cliente)
 Ver §7 — Lista de TODO
-
-### 🔲 Próximas tareas técnicas
-- Instalar dependencias (`npm install` dentro de la carpeta raíz del sitio)
-- Configurar variables de entorno en Vercel
-- Aplicar migración SQL en Supabase
-- Configurar proveedor de pagos (Stripe) cuando esté disponible
-- Añadir Dependabot al repo
-- Conectar analítica sin cookies (Plausible / Umami)
-- CAPTCHA (Cloudflare Turnstile) en formulario de contacto cuando se active
 
 ---
 
@@ -85,14 +74,12 @@ Ver §7 — Lista de TODO
 
 | Fecha | Decisión | Razón |
 |-------|----------|-------|
-| 2026-05-31 | Next.js 15 + Tailwind v3 (no v4) | El mega-prompt requiere `tailwind.config.ts` clásico con tokens; Tailwind v4 usa `@theme` CSS. Se elige v3 para máxima claridad en tokens de diseño. Trade-off: el proyecto hermano usa v4. |
-| 2026-05-31 | `service_role` en route handlers, no en cliente | La clave admin solo existe en vars de entorno server-side (sin `NEXT_PUBLIC_`). El cliente nunca la ve. |
-| 2026-05-31 | Rate limiting en memoria (no Redis) | Sin dependencia extra. Trade-off conocido: no persiste entre instancias serverless. Para volumen bajo de un formulario de contacto, es aceptable. Documentar en README para upgrade futuro. |
-| 2026-05-31 | RLS: deny-all por defecto, solo service_role puede leer submissions | Las submissions de formulario son datos sensibles. El anon key no puede leerlas. |
-| 2026-05-31 | Secciones importan content.ts directamente | Más limpio que pasar todo como props en sections.config. El registry solo registra orden y activación. |
-| 2026-05-31 | Sin proveedor de pagos activo | La regla §6.5 prohíbe formularios de tarjeta propios. El botón "Donar" está presente pero deshabilitado con TODO visible hasta tener Stripe configurado. |
-| 2026-05-31 | CSP con `'unsafe-inline'` en styles | Tailwind v3 genera clases en runtime en dev; en producción todo es inline via `<style>` de Next.js. Trade-off de seguridad documentado. |
-| 2026-05-31 | `poweredByHeader: false` | Elimina `X-Powered-By: Next.js` para reducir información de fingerprinting. |
+| 2026-05-31 | Next.js 15 + Tailwind v3 | `tailwind.config.ts` clásico con tokens de marca. Trade-off: proyecto hermano usa v4. |
+| 2026-05-31 | `service_role` solo en server-side | La clave admin nunca llega al cliente. |
+| 2026-05-31 | Rate limiting en memoria | Sin dependencia extra. Trade-off conocido: no persiste entre instancias. |
+| 2026-05-31 | RLS deny-all por defecto | Las submissions son datos sensibles; anon key no puede leerlas. |
+| 2026-05-31 | CSP con `'unsafe-inline'` en styles | Tailwind v3 genera estilos inline. Trade-off documentado. |
+| 2026-05-31 | Auth admin: cookie httpOnly HMAC | Elimina dependencia de `createBrowserClient()` que fallaba si `NEXT_PUBLIC_SUPABASE_ANON_KEY` no estaba bakeada en el bundle. Cookie httpOnly no es accesible por JS; HMAC-SHA256 con Web Crypto API funciona en Edge y Node. `ADMIN_PASSWORD` vive solo en Vercel como secreto. |
 
 ---
 
@@ -100,74 +87,67 @@ Ver §7 — Lista de TODO
 
 ```
 / (raíz del repo)
-├── CLAUDE.md                   ← este archivo
-├── README.md                   ← instrucciones de instalación y seguridad
-├── .gitignore                  ← cubre ambos proyectos del repo
-├── .env.example                ← plantilla SIN valores reales
-├── package.json                ← dependencias del sitio DSF
-├── tsconfig.json               ← TypeScript strict
-├── tailwind.config.ts          ← tokens de diseño (#ea580c y escala)
-├── postcss.config.mjs          ← tailwind + autoprefixer
-├── next.config.ts              ← Next.js config (no poweredByHeader, allowlist imgs)
-├── middleware.ts               ← CSP, HSTS, X-Frame-Options, etc.
+├── CLAUDE.md
+├── README.md
+├── .gitignore
+├── .env.example
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+├── postcss.config.mjs
+├── next.config.ts
+├── middleware.ts               ← CSP + protección /admin/* por cookie
+├── vercel.json                 ← SIN ADMIN_PASSWORD (se pone en Dashboard)
 │
 ├── app/
-│   ├── globals.css             ← reset + variables CSS
-│   ├── layout.tsx              ← RootLayout: Inter font, Navbar, Footer, FAB
-│   ├── page.tsx                ← orquestador: itera activeSections
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
 │   └── api/
-│       └── contact/
-│           └── route.ts        ← POST: valida, rate-limit, honeypot, guarda en Supabase
+│       ├── contact/route.ts
+│       └── admin/
+│           ├── auth/route.ts   ← POST login / DELETE logout (cookie)
+│           ├── quotations/route.ts
+│           ├── messages/route.ts
+│           ├── reply/route.ts
+│           └── services/route.ts
 │
-├── config/
-│   ├── site.config.ts          ← nombre, tagline, URL, redes, analítica
-│   ├── sections.config.ts      ← registro ordenado de secciones activas
-│   ├── content.ts              ← TODOS los textos/cifras (Zod-tipados, TODO donde faltan)
-│   └── theme.ts                ← paleta de colores derivada de la marca
-│
-├── components/
-│   ├── layout/
-│   │   ├── Navbar.tsx          ← fixed, logo, nav links, CTA donar, hamburger
-│   │   ├── Footer.tsx          ← gray-900, links, redes, legal
-│   │   └── FloatingContact.tsx ← FAB WhatsApp/contacto (bottom-right)
-│   ├── sections/
-│   │   ├── UrgentBanner.tsx    ← franja naranja urgente (dismissible)
-│   │   ├── Hero.tsx            ← h-screen, overlay, headline, 2 CTAs
-│   │   ├── ImpactStats.tsx     ← grid de métricas (TODO cifras reales)
-│   │   ├── About.tsx           ← misión/visión/método (TODO textos)
-│   │   ├── Programs.tsx        ← 3 fases como cards
-│   │   ├── History.tsx         ← línea de tiempo (TODO hitos)
-│   │   ├── Transparency.tsx    ← reportes financieros (TODO datos)
-│   │   ├── DonationLevels.tsx  ← 4 niveles de apoyo (TODO precios/beneficios)
-│   │   ├── CommunityCTA.tsx    ← CTA naranja con gradiente
-│   │   ├── DualCTA.tsx         ← CTA doble: donar + voluntariado
-│   │   └── SocialProof.tsx     ← testimonios + logos aliados (TODO)
-│   └── ui/
-│       ├── Button.tsx          ← variant: primary | outline | ghost
-│       ├── Card.tsx            ← base card con hover shadow
-│       ├── StatCard.tsx        ← número grande + label + icono
-│       ├── SectionHeader.tsx   ← eyebrow + h2 + descripción
-│       ├── DonationCard.tsx    ← tier de donación con badge "Popular"
-│       └── ActivityCard.tsx    ← card de actividad/programa
+├── app/admin/
+│   ├── layout.tsx              ← Sin Supabase, logout via DELETE /api/admin/auth
+│   ├── login/page.tsx          ← Solo campo contraseña
+│   ├── cotizaciones/page.tsx
+│   ├── mensajes/page.tsx
+│   └── servicios/page.tsx
 │
 ├── lib/
-│   ├── validation.ts           ← Zod: ContactSchema, DonationInterestSchema
-│   ├── sanitize.ts             ← strip HTML tags, limit length
-│   ├── rate-limit.ts           ← sliding window por IP (en memoria)
+│   ├── admin-session.ts        ← HMAC-SHA256, verifyAdminCookie, makeAdminCookie
+│   ├── validation.ts
+│   ├── sanitize.ts
+│   ├── rate-limit.ts
+│   ├── resend.ts
+│   ├── email-templates.ts
 │   └── supabase/
 │       ├── server.ts           ← createAdminClient() — solo server-side
-│       ├── browser.ts          ← createBrowserClient() — anon key
-│       └── types.ts            ← Database type (actualizar con supabase gen types)
+│       ├── browser.ts          ← createBrowserClient() — usado por formularios públicos
+│       ├── admin-auth.ts       ← (legado, ya no usado en admin)
+│       └── types.ts
 │
-├── supabase/
-│   ├── migrations/
-│   │   └── 001_initial_schema.sql  ← contact_submissions + donation_interests + RLS
-│   └── functions/
-│       └── contact-notify/
-│           └── index.ts            ← Edge Function: notificación por email al admin
+├── config/
+│   ├── site.config.ts
+│   ├── sections.config.ts
+│   ├── content.ts
+│   ├── services.config.ts
+│   └── theme.ts
 │
-└── centro-monitoreo-deportes/  ← proyecto existente RESCATADO (no modificar)
-    └── ...
+├── components/
+│   ├── layout/  (Navbar, Footer, FloatingContact)
+│   ├── sections/ (Hero, About, Programs, etc.)
+│   └── ui/ (Button, Card, StatCard, etc.)
+│
+├── supabase/migrations/
+│   └── 001_initial_schema.sql
+│
+└── centro-monitoreo-deportes/  ← no modificar
 ```
 
 ---
@@ -175,26 +155,23 @@ Ver §7 — Lista de TODO
 ## 5. Convenciones
 
 ### Código
-- **TypeScript `strict`**: sin `any` explícito salvo en type-erasure justificado
+- **TypeScript `strict`**: sin `any` explícito
 - **Componentes**: PascalCase, una responsabilidad por archivo
-- **Funciones/vars**: camelCase
-- **Constantes de config**: camelCase con tipo explícito
 - **Comentarios**: solo para decisiones no obvias o workarounds de seguridad
 
 ### Diseño
-- Color de acción único: `brand-600` (#ea580c) — **solo** para CTAs principales
-- Fondos alternan: `white → gray-50 → white` por sección
+- Color de acción único: `brand-600` (#ea580c)
+- Fondos alternan: `white → gray-50 → white`
 - Iconos: `lucide-react` exclusivamente
-- Imágenes: `next/image` con allowlist explícita; `alt` siempre significativo
-- Transiciones: `transition-shadow duration-200` / `transition-all duration-300`
-- Reducción de movimiento: `motion-safe:` prefix en animaciones
+- Imágenes: `next/image` con allowlist explícita
 
 ### Seguridad
 - Toda cadena de usuario pasa por `sanitizeText()` antes de guardarse
 - Toda entrada de API se valida con Zod server-side
 - `service_role` key: solo en vars server-side (sin `NEXT_PUBLIC_`)
+- `ADMIN_PASSWORD`: solo en Vercel Dashboard como secreto, nunca en el repo
 - No `dangerouslySetInnerHTML` sin pasar por `sanitize.ts`
-- Links externos: `rel="noopener noreferrer"` siempre
+- Links externos: `rel="noopener noreferrer"`
 
 ---
 
@@ -202,100 +179,80 @@ Ver §7 — Lista de TODO
 
 | # | Control | Estado | Notas |
 |---|---------|--------|-------|
-| 6.1 | `.env` no commiteado | ✅ | `.gitignore` cubre todos los `.env.*` |
-| 6.1 | Solo `.env.example` en repo | ✅ | Sin valores reales |
-| 6.1 | `node_modules` / `.next` en `.gitignore` | ✅ | Cubre raíz y subfolder |
+| 6.1 | `.env` no commiteado | ✅ | |
+| 6.1 | `ADMIN_PASSWORD` no en repo | ✅ | Solo en Vercel Dashboard como secreto |
 | 6.2 | Sin SQL por concatenación | ✅ | Solo cliente Supabase parametrizado |
-| 6.2 | RLS activa en todas las tablas | ✅ | Deny-all por defecto en migración |
-| 6.3 | Rate limiting en endpoints | ✅ | `lib/rate-limit.ts` (en memoria; escalar con Upstash/Redis en producción) |
-| 6.3 | Hook CAPTCHA listo | 🔶 | Comentario en formulario; activar Turnstile cuando se configure |
-| 6.4 | CSP restrictiva | ✅ | `middleware.ts`; `connect-src` solo a Supabase |
-| 6.4 | HSTS (max-age=2 años) | ✅ | `middleware.ts` |
-| 6.4 | X-Frame-Options DENY | ✅ | `middleware.ts` |
-| 6.4 | Permissions-Policy (cam/mic/geo off) | ✅ | `middleware.ts` |
-| 6.4 | X-Content-Type-Options nosniff | ✅ | `middleware.ts` |
-| 6.4 | Referrer-Policy strict | ✅ | `middleware.ts` |
-| 6.5 | Sin datos de tarjeta en la app | ✅ | Botón TODO deshabilitado; redirect a Stripe cuando esté config. |
-| 6.5 | Honeypot en formulario | ✅ | Campo `website` oculto verificado server-side |
-| 6.5 | Validación server-side con Zod | ✅ | `app/api/contact/route.ts` |
-| 6.5 | CSRF: route handler Next.js | ✅ | Same-origin enforced por Next.js route handlers |
-| 6.6 | Sin `dangerouslySetInnerHTML` | ✅ | No usado en esta versión |
-| 6.6 | Links externos con `noopener noreferrer` | ✅ | En todos los componentes |
-| 6.7 | `npm audit` limpio | ✅ | 0 vulnerabilidades. `overrides.postcss ^8.5.10` en package.json |
-| 6.7 | Lockfile commiteado | ✅ | `package-lock.json` commiteado |
-| 6.7 | Analítica sin cookies | 🔶 | Plausible/Umami pendiente de configurar |
-
-**Fuera del alcance de este código** (documentado, no ignorado):
-- DDoS de capa de red → mitigar en hosting (Vercel Shield / Cloudflare)
-- WAF / Bot protection → Cloudflare o Vercel Advanced
-- Seguridad física del servidor → responsabilidad de Vercel/Supabase
+| 6.2 | RLS activa | ✅ | Deny-all por defecto |
+| 6.3 | Rate limiting | ✅ | En memoria; escalar con Redis en producción |
+| 6.4 | CSP restrictiva | ✅ | `middleware.ts` |
+| 6.4 | HSTS / X-Frame / Permissions-Policy | ✅ | `middleware.ts` |
+| 6.5 | Cookie httpOnly + sameSite=strict | ✅ | `lib/admin-session.ts` |
+| 6.5 | HMAC-SHA256 no reversible | ✅ | Token de 64 chars hex |
+| 6.5 | Brute-force delay en login | ✅ | 400ms de espera en contraseña incorrecta |
+| 6.5 | Honeypot en formulario público | ✅ | Campo `website` oculto |
+| 6.6 | Sin `dangerouslySetInnerHTML` | ✅ | |
+| 6.7 | `npm audit` limpio | ✅ | 0 vulnerabilidades |
 
 ---
 
-## 7. Datos Pendientes (TODO reales)
+## 7. Datos Pendientes (TODO reales del cliente)
 
-El cliente debe proveer los siguientes datos antes de hacer deploy productivo:
-
-| ID | Dato | Ubicación en código |
-|----|------|---------------------|
-| TODO-01 | Número de atletas beneficiados | `config/content.ts` → `stats.athletes` |
-| TODO-02 | Número de países alcanzados | `config/content.ts` → `stats.countries` |
-| TODO-03 | Número de municipios atendidos | `config/content.ts` → `stats.municipalities` |
-| TODO-04 | Años de trayectoria | `config/content.ts` → `stats.years` |
-| TODO-05 | Total recaudado/gestionado | `config/content.ts` → `stats.raised` |
-| TODO-06 | Texto de misión | `config/content.ts` → `about.mission` |
-| TODO-07 | Texto de visión | `config/content.ts` → `about.vision` |
-| TODO-08 | Descripción del método/enfoque | `config/content.ts` → `about.method` |
-| TODO-09 | Descripción Fase 1 (Programa) | `config/content.ts` → `programs.phases[0]` |
-| TODO-10 | Descripción Fase 2 (Programa) | `config/content.ts` → `programs.phases[1]` |
-| TODO-11 | Descripción Fase 3 (Programa) | `config/content.ts` → `programs.phases[2]` |
-| TODO-12 | Hitos de la trayectoria (fechas + descripciones) | `config/content.ts` → `history.milestones` |
-| TODO-13 | Reportes financieros (links/PDFs) | `config/content.ts` → `transparency.reports` |
-| TODO-14 | Cifras de transparencia (% admin, % programas) | `config/content.ts` → `transparency.metrics` |
-| TODO-15 | Precios/montos por nivel de donación | `config/content.ts` → `donationLevels` |
-| TODO-16 | Beneficios por nivel de donación | `config/content.ts` → `donationLevels[*].benefits` |
-| TODO-17 | Testimonios (nombre, cargo, texto) | `config/content.ts` → `socialProof.testimonials` |
-| TODO-18 | Logos de aliados/socios | `config/content.ts` → `socialProof.partners` |
-| TODO-19 | Número de WhatsApp | `config/site.config.ts` → `contact.whatsapp` |
-| TODO-20 | Handles de redes sociales | `config/site.config.ts` → `social.*` |
-| TODO-21 | URL de imagen del Hero | `config/content.ts` → `hero.backgroundImage` |
-| TODO-22 | Logo oficial (SVG/PNG) | `public/logo.svg` (reemplazar placeholder) |
-| TODO-23 | Configuración proveedor de pagos (Stripe) | `.env` → `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
-| TODO-24 | Mensaje urgente del banner | `config/content.ts` → `urgentBanner.message` |
-| TODO-25 | Texto definitivo tagline / subheadline hero | `config/content.ts` → `hero.*` |
+| ID | Dato | Ubicación |
+|----|------|-----------|
+| TODO-01 a 05 | Estadísticas (atletas, países, municipios, años, recaudado) | `config/content.ts` → `stats.*` |
+| TODO-06 a 08 | Misión, visión, método | `config/content.ts` → `about.*` |
+| TODO-09 a 11 | Descripciones de fases del programa | `config/content.ts` → `programs.phases` |
+| TODO-12 | Hitos de trayectoria | `config/content.ts` → `history.milestones` |
+| TODO-13 a 14 | Reportes financieros y cifras de transparencia | `config/content.ts` → `transparency.*` |
+| TODO-15 a 16 | Montos y beneficios por nivel de donación | `config/content.ts` → `donationLevels` |
+| TODO-17 a 18 | Testimonios y logos de aliados | `config/content.ts` → `socialProof.*` |
+| TODO-19 a 22 | WhatsApp, redes sociales, imagen hero, logo | `config/site.config.ts` y `public/logo.svg` |
+| TODO-23 | Stripe para pagos | `.env` → `STRIPE_SECRET_KEY` |
 
 ---
 
-## 8. Cómo Retomar / Deploy Pendiente
+## 8. Variables de Entorno Requeridas
 
-### Pasos para completar el deploy en Vercel (requiere acceso al Dashboard)
+### En Vercel Dashboard → Settings → Environment Variables
 
-1. Ir a **vercel.com/new** → "Import Git Repository"
-2. Seleccionar `rauldubon95-ctrl/infraestructura-deportiva-nacional`
-3. **Root Directory:** `/` (dejar vacío = raíz)
-4. En **Environment Variables** añadir:
+| Variable | Tipo | Dónde obtenerla |
+|----------|------|-----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Plain text | `https://iaolmlfrzjaafmklkoju.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Plain text | Supabase Dashboard → Project Settings → API → anon/public |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Secret** | Supabase Dashboard → Project Settings → API → service_role |
+| `ADMIN_PASSWORD` | **Secret** | La contraseña que elijas para `/admin/login` |
+| `RESEND_API_KEY` | **Secret** | resend.com → API Keys |
+| `FROM_EMAIL` | Plain text | Email verificado en Resend (ej. `noreply@tudominio.com`) |
 
-| Variable | Dónde obtenerla |
-|----------|----------------|
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → service_role |
-| `ADMIN_EMAIL` | Email de notificaciones del admin |
+> **Importante**: después de agregar o cambiar variables → ir a Deployments → Redeploy para que el build las incluya.
 
-   Las claves `NEXT_PUBLIC_*` ya están en `vercel.json` y se aplican automáticamente.
+---
 
-5. Click **Deploy** → esperar build (~2 min)
-6. La URL de producción será `https://<proyecto>.vercel.app`
+## 9. Sistema de Autenticación Admin (detalle técnico)
 
-### Para retomar desarrollo
+### Cómo funciona
+1. Usuario envía contraseña a `POST /api/admin/auth`
+2. Se compara con `process.env.ADMIN_PASSWORD` (tiempo constante implícito + delay de 400ms)
+3. Si es correcta: se genera token = HMAC-SHA256(`ADMIN_PASSWORD`, mensaje `"dsf_admin_session_v1"`) → hex de 64 chars
+4. Se pone cookie `dsf_admin` con ese token: `httpOnly`, `secure`, `sameSite=strict`, `maxAge=7 días`
+5. El middleware verifica solo que la cookie exista (presencia) antes de servir páginas admin
+6. Cada ruta API llama `verifyAdminCookie(request.cookies)` que recalcula el HMAC y compara
+7. `DELETE /api/admin/auth` borra la cookie (logout)
 
-1. Lee este archivo desde la sección "Estado Actual"
-2. Los TODO activos están en `config/content.ts` y `config/site.config.ts`
-3. Para añadir una sección: crear `components/sections/NuevaSección.tsx` + agregar entrada en `config/sections.config.ts`
+### Archivos clave
+- `lib/admin-session.ts` — lógica del token
+- `app/api/admin/auth/route.ts` — login / logout
+- `middleware.ts` — guarda de rutas (presencia de cookie)
 
-### Supabase — ya configurado
+---
 
-- Proyecto: `iaolmlfrzjaafmklkoju` (activo, región us-west-2)
-- Tablas: `contact_submissions`, `donation_interests`
-- RLS: anon puede INSERT; solo service_role puede SELECT
+## 10. Cómo Retomar
+
+1. Lee este archivo desde §2 (Estado Actual)
+2. Si el admin sigue fallando: verificar variables de entorno en §8 y hacer Redeploy
+3. Los TODO de contenido están en `config/content.ts` y `config/site.config.ts`
+4. Para añadir sección: crear `components/sections/NuevaSección.tsx` + entrada en `config/sections.config.ts`
+5. Supabase proyecto activo: `iaolmlfrzjaafmklkoju`
 
 ---
 
