@@ -12,6 +12,7 @@ import DonationLevels from "@/components/sections/DonationLevels";
 import CommunityCTA   from "@/components/sections/CommunityCTA";
 import DualCTA        from "@/components/sections/DualCTA";
 import SocialProof    from "@/components/sections/SocialProof";
+import Services       from "@/components/sections/Services";
 import Contact        from "@/components/sections/Contact";
 
 // Erasure de tipo en el registro — cada componente está tipado individualmente.
@@ -37,6 +38,7 @@ export const sections: SectionEntry[] = [
   { key: "community-cta",   Component: CommunityCTA,    active: true  },
   { key: "dual-cta",        Component: DualCTA,         active: true  },
   { key: "social-proof",    Component: SocialProof,     active: true  },
+  { key: "services",        Component: Services,        active: true  },
   { key: "contact",         Component: Contact,         active: true  },
 ];
 

@@ -46,3 +46,11 @@ body {
   will-change: transform;
   transform: translateZ(0);
 }
+
+/* Campo de formulario reutilizable */
+.input-field {
+  @apply w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm
+         placeholder:text-gray-400
+         focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+         transition-shadow;
+}

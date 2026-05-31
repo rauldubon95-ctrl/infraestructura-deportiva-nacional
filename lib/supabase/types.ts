@@ -160,6 +160,94 @@ export type Database = {
         }
         Relationships: []
       }
+      // Tablas de consultoría profesional
+      services: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          description: string
+          category: string
+          icon_name: string
+          featured: boolean
+          active: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          description: string
+          category: string
+          icon_name?: string
+          featured?: boolean
+          active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          description?: string
+          category?: string
+          icon_name?: string
+          featured?: boolean
+          active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      quotation_requests: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          organization: string | null
+          service_slug: string
+          service_name: string
+          description: string
+          budget: string | null
+          file_path: string | null
+          file_name: string | null
+          ip_hash: string | null
+          reviewed: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          organization?: string | null
+          service_slug: string
+          service_name: string
+          description: string
+          budget?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          ip_hash?: string | null
+          reviewed?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          organization?: string | null
+          service_slug?: string
+          service_name?: string
+          description?: string
+          budget?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          ip_hash?: string | null
+          reviewed?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
