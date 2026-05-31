@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { CheckCircle, Clock, ChevronLeft, ChevronRight, RefreshCw, Eye, Mail, MailCheck } from "lucide-react";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import type { Tables } from "@/lib/supabase/types";
 
 type Quotation = Tables<"quotation_requests"> & {
@@ -44,25 +43,14 @@ export default function CotizacionesPage() {
   const LIMIT = 20;
   const totalPages = Math.ceil(count / LIMIT);
 
-  const getToken = async () => {
-    const supabase = createBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ?? null;
-  };
-
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await getToken();
-      if (!token) return;
-
       const params = new URLSearchParams({ page: String(page) });
       if (filter === "pending")  params.set("reviewed", "false");
       if (filter === "reviewed") params.set("reviewed", "true");
 
-      const res = await fetch(`/api/admin/quotations?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res  = await fetch(`/api/admin/quotations?${params}`);
       const json = await res.json();
       setData(json.data ?? []);
       setCount(json.count ?? 0);
@@ -74,11 +62,9 @@ export default function CotizacionesPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function toggleReviewed(q: Quotation) {
-    const token = await getToken();
-    if (!token) return;
     await fetch("/api/admin/quotations", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: q.id, reviewed: !q.reviewed }),
     });
     fetchData();
@@ -97,10 +83,9 @@ export default function CotizacionesPage() {
     setSendStatus("sending");
     setSendError("");
     try {
-      const token = await getToken();
       const res = await fetch("/api/admin/reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id:             replying.id,
           type:           "quotation",
