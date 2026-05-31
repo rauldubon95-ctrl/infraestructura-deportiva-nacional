@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAdmin } from "@/lib/supabase/admin-auth";
 import { createAdminClient } from "@/lib/supabase/server";
-import { resend, FROM_EMAIL } from "@/lib/resend";
+import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { buildReplyHtml } from "@/lib/email-templates";
 import { sanitizeText } from "@/lib/sanitize";
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // Enviar email
-  const { error: emailError } = await resend.emails.send({
+  const { error: emailError } = await getResend().emails.send({
     from:    FROM_EMAIL,
     to:      [recipientEmail],
     subject,
